@@ -1,8 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -18,10 +22,11 @@ import { CategoryService } from './category.service';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
-import { CreateCategoryDto } from './dto/create-category.dt';
+import { CreateCategoryDto } from './dto/create-category.dto';
 import { CategoryResponseDto } from './dto/category-response.dto';
 import { QueryCategoryDto } from './dto/query-category.dto';
 import { Role } from '@prisma/client';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @ApiTags('Categories')
 @Controller('categories')
@@ -43,7 +48,7 @@ export class CategoryController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async create(
-    createCategoryDto: CreateCategoryDto,
+    @Body() createCategoryDto: CreateCategoryDto,
   ): Promise<CategoryResponseDto> {
     return await this.categoryService.create(createCategoryDto);
   }
@@ -107,5 +112,53 @@ export class CategoryController {
   })
   async findBySlug(@Param('slug') slug: string): Promise<CategoryResponseDto> {
     return await this.categoryService.findBySlug(slug);
+  }
+
+  // update category
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update category (Admin only)' })
+  @ApiBody({
+    type: UpdateCategoryDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Category updated successfully',
+    type: CategoryResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Category slug already exists',
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() updateCategoryDto: UpdateCategoryDto,
+  ): Promise<CategoryResponseDto> {
+    return await this.categoryService.update(id, updateCategoryDto);
+  }
+
+  // delete category(Admin only)
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete category (admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Category deleted successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Category not found',
+  })
+  async remove(@Param('id') id: string): Promise<{ message: string }> {
+    return await this.categoryService.remove(id);
   }
 }
