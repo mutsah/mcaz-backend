@@ -1,7 +1,7 @@
 // Data Transfer Object for authentication response
 
 import { ApiProperty } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 
 export class AuthResponseDto {
   @ApiProperty({
@@ -23,14 +23,18 @@ export class AuthResponseDto {
       email: 'user@example.com',
       firstName: 'John',
       lastName: 'Doe',
+      phone: '+263771234567',
       role: 'USER',
+      status: 'VERIFIED',
     },
   })
   user: {
     id: string;
     email: string;
-    firstName?: string | null;
-    lastName?: string | null;
+    firstName: string;
+    lastName: string;
+    phone: string;
     role: Role;
+    status: UserStatus;
   };
 }

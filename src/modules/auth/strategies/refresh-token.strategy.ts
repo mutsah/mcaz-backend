@@ -26,20 +26,15 @@ export class RefreshTokenStrategy extends PassportStrategy(
   }
 
   async validate(req: Request, payload: { sub: string; email: string }) {
-    console.log('RefreshTokenStrategy.validate called');
-    console.log('Payload', { sub: payload.sub, email: payload.email });
-
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
-      console.log('No authorization header found');
       throw new UnauthorizedException('Refresh token not provided');
     }
 
     const refreshToken = authHeader.replace('Bearer ', '').trim();
 
     if (!refreshToken) {
-      console.log('No refresh token found in authorization header');
       throw new UnauthorizedException(
         'Refresh token is empty after extraction',
       );
@@ -52,10 +47,11 @@ export class RefreshTokenStrategy extends PassportStrategy(
         email: true,
         firstName: true,
         lastName: true,
+        phone: true,
         role: true,
+        status: true,
         createdAt: true,
         updatedAt: true,
-        password: false,
         refreshToken: true,
       },
     });

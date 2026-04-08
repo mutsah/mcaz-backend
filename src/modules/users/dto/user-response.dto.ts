@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { KycStatus, Role, UserStatus } from '@prisma/client';
 
 export class UserResponseDto {
   @ApiProperty({
@@ -10,15 +11,20 @@ export class UserResponseDto {
   @ApiProperty({ description: 'User email', example: 'user@example.com' })
   email: string;
 
-  @ApiProperty({ description: 'User name', example: 'John', nullable: true })
-  firstName: string | null;
+  @ApiProperty({ description: 'User first name', example: 'John' })
+  firstName: string;
 
-  @ApiProperty({
-    description: 'User last name',
-    example: 'Doe',
-    nullable: true,
-  })
-  lastName: string | null;
+  @ApiProperty({ description: 'User last name', example: 'Doe' })
+  lastName: string;
+
+  @ApiProperty({ description: 'User phone number', example: '+263771234567' })
+  phone: string;
+
+  @ApiProperty({ enum: Role, example: 'USER' })
+  role: Role;
+
+  @ApiProperty({ enum: UserStatus, example: 'VERIFIED' })
+  status: UserStatus;
 
   @ApiProperty({
     description: 'User created date',
@@ -31,4 +37,32 @@ export class UserResponseDto {
     example: '2023-01-01T00:00:00.000Z',
   })
   updatedAt: Date;
+}
+
+export class AdminUserSummaryDto extends UserResponseDto {
+  @ApiProperty({ enum: KycStatus, nullable: true, example: 'APPROVED' })
+  kycStatus: KycStatus | null;
+
+  @ApiProperty({ example: 2 })
+  totalLoans: number;
+
+  @ApiProperty({ example: 1 })
+  activeLoans: number;
+}
+
+export class AdminUserListResponseDto {
+  @ApiProperty({ type: [AdminUserSummaryDto] })
+  items: AdminUserSummaryDto[];
+
+  @ApiProperty({ example: 1 })
+  page: number;
+
+  @ApiProperty({ example: 10 })
+  limit: number;
+
+  @ApiProperty({ example: 25 })
+  total: number;
+
+  @ApiProperty({ example: 3 })
+  totalPages: number;
 }

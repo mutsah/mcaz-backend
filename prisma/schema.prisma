@@ -1,207 +1,175 @@
-
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-// Database Shemas
-
 enum Role {
   USER
   ADMIN
 }
 
-enum OrderStatus {
+enum UserStatus {
   PENDING
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
+  VERIFIED
 }
 
-enum PaymentStatus {
+enum OtpType {
+  REGISTRATION
+  RESET
+}
+
+enum KycDocumentType {
+  NATIONAL_ID
+  PASSPORT
+}
+
+enum KycStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum LoanStatus {
   PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
+  ACTIVE
+  CLOSED
+  REJECTED
 }
 
 model User {
-  id String @id @default(uuid())  
-  email String @unique
-  password String
-  firstName String?
-  lastName String?
-  role Role @default(USER)
-  refreshToken String? 
+  id           String     @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String     @unique
+  phone        String     @unique
+  passwordHash String
+  role         Role       @default(USER)
+  status       UserStatus @default(PENDING)
+  refreshToken String?
 
-  // Relations
-  orders Order[]
-  carts Cart[]
-  payments Payment[]
+  otpRecords      OtpRecord[]
+  kycSubmissions  KycSubmission[] @relation("UserKycSubmissions")
+  reviewedKyc     KycSubmission[] @relation("ReviewedKycByAdmin")
+  loans           Loan[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
   @@map("users")
 }
 
-model Product{
-  id String @id @default(uuid())
-  name String
-  description String?
-  price Decimal @db.Decimal(10, 2)
-  stock Int
-  sku String @unique
-  imageUrl String?
-  isActive Boolean @default(true)
+model OtpRecord {
+  id        String   @id @default(uuid())
+  userId    String
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  type      OtpType
 
-  // Relations
-  orderItems OrderItem[]
-  cartItems CartItem[]
-
-  categoryId String
-  category Category @relation(fields: [categoryId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([sku])
-  @@index([categoryId])
-  @@index([isActive])
-  @@map("products")
-}
-
-model Category {
-  id String @id @default(uuid())
-  name String @unique
-  description String?
-  slug String @unique
-  imageUrl String?
-  isActive Boolean @default(true)
-
-  // Relations
-  products Product[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([slug])
-  @@index([isActive])
-  @@map("categories")
-}
-
-model CartItem {
-  id String @id @default(uuid())
-  productId String
-  quantity Int @default(1)
-
-   // Relations
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  cartId String
-  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([cartId, productId])
-  @@index([productId])
-  @@index([cartId])
-  @@map("cart_items")
-}
-
-model OrderItem {
-  id String @id @default(uuid())
-  productId String
-  orderId String
-  quantity Int
-  price Decimal @db.Decimal(10, 2)
-
-  // Relations
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-  @@index([productId])
-  @@index([orderId])
-  @@map("order_items")
-}
-
-model Order{
-  id String @id @default(uuid())
-  userId String
-  orderNumber String @unique @default(uuid())
-  status OrderStatus @default(PENDING)
-  totalAmount Decimal @db.Decimal(10, 2)
-  cartId String
-  shippingAddress String
-
-
-  // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
-  payment Payment?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, type])
+  @@index([userId, type, verified])
+  @@index([expiresAt])
+  @@index([expiresAt, verified])
+  @@map("otp_records")
+}
+
+model KycSubmission {
+  id            String          @id @default(uuid())
+  userId        String
+  documentType  KycDocumentType
+  frontFilePath String
+  backFilePath  String?
+  status        KycStatus       @default(SUBMITTED)
+  reviewedBy    String?
+  rejectionNote String?
+
+  user     User  @relation("UserKycSubmissions", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("ReviewedKycByAdmin", fields: [reviewedBy], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@index([orderNumber])
+  @@index([userId, status])
   @@index([status])
-  @@map("orders")
+  @@index([status, createdAt])
+  @@index([reviewedBy])
+  @@map("kyc_submissions")
 }
 
-model Cart {
-  id String @id @default(uuid())
-  userId String
+model Loan {
+  id          String     @id @default(uuid())
+  userId      String
+  principal   Decimal    @db.Decimal(15, 2)
+  annualRate  Decimal?   @db.Decimal(5, 4)
+  termMonths  Int
+  status      LoanStatus @default(PENDING)
+  disbursedAt DateTime?
+  purpose     String?
 
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders Order[]
-
-  checkedOut Boolean @default(false)
-
-  cartItems CartItem[]
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedule    AmortizationSchedule[]
+  interestLog InterestLedger[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@map("carts")
+  @@index([userId, status])
+  @@index([status])
+  @@index([status, createdAt])
+  @@index([disbursedAt])
+  @@map("loans")
 }
 
-model Payment {
-  id String @id @default(uuid())
-  amount Decimal @db.Decimal(10, 2)
-  status PaymentStatus @default(PENDING)
-  currency String @default("usd")
-  paymentMethod String?
-  transactionId String? @unique
+model AmortizationSchedule {
+  id            String   @id @default(uuid())
+  loanId        String
+  installmentNo Int
+  dueDate       DateTime @db.Date
+  principalDue  Decimal  @db.Decimal(15, 2)
+  interestDue   Decimal  @db.Decimal(15, 2)
+  totalDue      Decimal  @db.Decimal(15, 2)
+  paid          Boolean  @default(false)
 
-  userId String
-  orderId String @unique
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId])
-  @@index([orderId])
-  @@index([transactionId])
-  @@map("payments")
+  @@unique([loanId, installmentNo])
+  @@index([loanId])
+  @@index([loanId, dueDate])
+  @@index([loanId, paid, dueDate])
+  @@map("amortization_schedule")
 }
 
+model InterestLedger {
+  id              String   @id @default(uuid())
+  loanId          String
+  date            DateTime @db.Date
+  dailyInterest   Decimal  @db.Decimal(15, 6)
+  balanceSnapshot Decimal  @db.Decimal(15, 2)
 
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([loanId, date])
+  @@index([date])
+  @@index([loanId, date])
+  @@map("interest_ledger")
+}

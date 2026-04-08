@@ -7,8 +7,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // project description
-  app.setGlobalPrefix('api/v1/');
+  app.setGlobalPrefix('api');
 
   // set global validation
   app.useGlobalPipes(
@@ -24,7 +23,7 @@ async function bootstrap() {
 
   // enable CORS
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') ?? 'http://localhost:3000',
+    origin: process.env.ALLOWED_ORIGINS?.split(',') ?? 'http://localhost:5173',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -32,10 +31,13 @@ async function bootstrap() {
 
   // enable swagger docs
   const config = new DocumentBuilder()
-    .setTitle('E-commerce API')
-    .setDescription('API documentation for the E-commerce application')
+    .setTitle('Microloan API')
+    .setDescription('API documentation for microloan onboarding and lending')
     .setVersion('1.0')
     .addTag('auth', 'Authentication related endpoints')
+    .addTag('kyc', 'KYC submission and review endpoints')
+    .addTag('loans', 'Loan application and lifecycle endpoints')
+    .addTag('users', 'User profile and admin user endpoints')
     .addBearerAuth(
       {
         type: 'http',
@@ -58,7 +60,7 @@ async function bootstrap() {
       },
       'Refresh-JWT',
     )
-    .addServer('http://localhost:3002', 'Local development server')
+    .addServer('http://localhost:3001', 'Local development server')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -68,7 +70,7 @@ async function bootstrap() {
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
     },
-    customSiteTitle: 'E-commerce API Documentation',
+    customSiteTitle: 'Microloan API Documentation',
     customfavIcon: 'https://nestjs.com/img/logo-small.svg',
     customCss: `
       .swagger-ui .topbar { display: none }
@@ -77,7 +79,7 @@ async function bootstrap() {
       `,
   });
 
-  await app.listen(process.env.PORT ?? 3002);
+  await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap().catch((error) => {
   console.error('Error starting server:', error);

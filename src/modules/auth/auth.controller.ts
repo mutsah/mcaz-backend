@@ -6,7 +6,12 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
@@ -14,41 +19,53 @@ import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // register api
   @Post('register')
   @HttpCode(201)
   @ApiOperation({
-    summary: 'Register a new user',
-    description: 'Create a new user account',
+    summary: 'Register user and send OTP',
+    description: 'Create a pending user account and issue registration OTP',
   })
   @ApiResponse({
     status: 201,
-    description: 'User successfully registered',
-    type: AuthResponseDto,
+    description: 'User created in pending status and OTP dispatched',
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request - Validation failed or user already exists',
-  })
-  @ApiResponse({
-    status: 500,
-    description:
-      'Internal Server Error - An error occurred during registration',
-  })
-  @ApiResponse({
-    status: 429,
-    description: 'Too Many Requests - Rate limit exceeded',
-  })
-  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
+  async register(
+    @Body() registerDto: RegisterDto,
+  ): Promise<{ message: string }> {
     return await this.authService.register(registerDto);
   }
 
-  //   refresh access token
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify registration OTP' })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP verified and account activated',
+  })
+  async verifyOtp(
+    @Body() verifyOtpDto: VerifyOtpDto,
+  ): Promise<{ message: string }> {
+    return this.authService.verifyRegistrationOtp(verifyOtpDto);
+  }
+
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend registration OTP' })
+  @ApiResponse({ status: 200, description: 'New OTP issued' })
+  async resendOtp(
+    @Body() resendOtpDto: ResendOtpDto,
+  ): Promise<{ message: string }> {
+    return this.authService.resendRegistrationOtp(resendOtpDto);
+  }
+
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @UseGuards(RefreshTokenGuard)
@@ -74,7 +91,6 @@ export class AuthController {
     return await this.authService.refreshTokens(userId);
   }
 
-  //   logout
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -98,7 +114,6 @@ export class AuthController {
     return await this.authService.login(loginDto);
   }
 
-  //   logout user and invalidate refresh token
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)

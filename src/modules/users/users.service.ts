@@ -4,14 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { UserResponseDto } from './dto/user-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
-import * as bcrypt from 'bcrypt';
+import {
+  AdminUserListResponseDto,
+  AdminUserSummaryDto,
+  UserResponseDto,
+} from './dto/user-response.dto';
+import { QueryUsersDto } from './dto/query-users.dto';
 
 @Injectable()
 export class UsersService {
-  private readonly SALT_ROUNDS = 10;
   constructor(private prisma: PrismaService) {}
 
   async findOne(userId: string): Promise<UserResponseDto> {
@@ -22,10 +24,11 @@ export class UsersService {
         email: true,
         firstName: true,
         lastName: true,
+        phone: true,
+        status: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
-        role: true,
-        password: false,
       },
     });
 
@@ -35,20 +38,62 @@ export class UsersService {
     return user;
   }
 
-  async findAll(): Promise<UserResponseDto[]> {
-    return this.prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        createdAt: true,
-        updatedAt: true,
-        role: true,
-        password: false,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAllForAdmin(
+    query: QueryUsersDto,
+  ): Promise<AdminUserListResponseDto> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+
+    const [users, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          status: true,
+          role: true,
+          kycSubmissions: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { status: true },
+          },
+          loans: {
+            select: { id: true, status: true },
+          },
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.user.count(),
+    ]);
+
+    const items: AdminUserSummaryDto[] = users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      role: user.role,
+      status: user.status,
+      kycStatus: user.kycSubmissions[0]?.status ?? null,
+      totalLoans: user.loans.length,
+      activeLoans: user.loans.filter((loan) => loan.status === 'ACTIVE').length,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    }));
+
+    return {
+      items,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async update(
@@ -63,13 +108,12 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
-      const emailTaken = await this.prisma.user.findUnique({
-        where: { email: updateUserDto.email },
+    if (updateUserDto.phone && updateUserDto.phone !== existingUser.phone) {
+      const phoneTaken = await this.prisma.user.findUnique({
+        where: { phone: updateUserDto.phone },
       });
-
-      if (emailTaken) {
-        throw new ConflictException('Email already in use');
+      if (phoneTaken) {
+        throw new ConflictException('Phone already in use');
       }
     }
 
@@ -81,70 +125,14 @@ export class UsersService {
         email: true,
         firstName: true,
         lastName: true,
+        phone: true,
+        status: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
-        role: true,
-        password: false,
       },
     });
 
     return updatedUser;
-  }
-
-  async changePassword(
-    userId: string,
-    changePasswordDto: ChangePasswordDto,
-  ): Promise<{ message: string }> {
-    const { currentPassword, newPassword } = changePasswordDto;
-
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      user.password,
-    );
-
-    if (!isPasswordValid) {
-      throw new NotFoundException('Current password is incorrect');
-    }
-
-    const isSamePassword = await bcrypt.compare(newPassword, user.password);
-
-    if (isSamePassword) {
-      throw new ConflictException(
-        'New password must be different from current password',
-      );
-    }
-
-    const hashedNewPassword = await bcrypt.hash(newPassword, this.SALT_ROUNDS);
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedNewPassword },
-    });
-
-    return { message: 'Password changed successfully' };
-  }
-
-  async remove(userId: string): Promise<{ message: string }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    await this.prisma.user.delete({
-      where: { id: userId },
-    });
-
-    return { message: 'User deleted successfully' };
   }
 }

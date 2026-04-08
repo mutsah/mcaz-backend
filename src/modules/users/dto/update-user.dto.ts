@@ -1,16 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsMobilePhone, IsOptional, IsString } from 'class-validator';
 
 export class UpdateUserDto {
-  @ApiProperty({
-    description: 'User email',
-    example: 'john.doe@example.com',
-    required: false,
-  })
-  @IsOptional()
-  @IsEmail()
-  email?: string;
-
   @ApiProperty({ description: 'User first name', example: 'John' })
   @IsOptional()
   @IsString()
@@ -20,4 +11,17 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   lastName?: string;
+
+  @ApiProperty({
+    description: 'User phone',
+    example: '+263771234567',
+    required: false,
+  })
+  @IsOptional()
+  @IsMobilePhone(
+    undefined,
+    {},
+    { message: 'Please provide a valid phone number' },
+  )
+  phone?: string;
 }

@@ -28,10 +28,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         firstName: true,
         lastName: true,
+        phone: true,
         role: true,
+        status: true,
         createdAt: true,
         updatedAt: true,
-        password: false,
       },
     });
 
