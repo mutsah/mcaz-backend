@@ -1,3 +1,10 @@
+databases:
+  - name: microloan-db
+    databaseName: microloan
+    user: microloan_user
+    region: oregon
+    plan: free
+
 services:
   - type: web
     name: microloan-api
@@ -11,7 +18,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: microloan-db
+          property: connectionString
       - key: JWT_SECRET
         sync: false
       - key: JWT_EXPIRES_IN
