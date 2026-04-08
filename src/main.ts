@@ -61,10 +61,7 @@ async function bootstrap() {
       'Refresh-JWT',
     )
     .addServer('http://localhost:3001', 'Local development server')
-    .addServer(
-      process.env.RENDER_EXTERNAL_URL ?? '',
-      'Production server',
-    )
+    .addServer(process.env.RENDER_EXTERNAL_URL ?? '', 'Production server')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
