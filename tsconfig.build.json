@@ -3,6 +3,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node10",
+    "resolvePackageJsonExports": false,
     "noEmitOnError": false
   },
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts", "prisma.config.ts"]
