@@ -10,6 +10,7 @@ import { KycModule } from './modules/kyc/kyc.module';
 import { LoansModule } from './modules/loans/loans.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UploadModule } from './modules/upload/upload.module';
+import { AuditTrailModule } from './modules/audit-trail/audit-trail.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UploadModule } from './modules/upload/upload.module';
     KycModule,
     LoansModule,
     UploadModule,
+    AuditTrailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

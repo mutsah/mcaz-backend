@@ -14,7 +14,8 @@
 5. [KYC Module](#kyc-module)
 6. [Loans Module](#loans-module)
 7. [Users Module](#users-module)
-8. [Enums](#enums)
+8. [Audit Trail Module](#audit-trail-module)
+9. [Enums](#enums)
 
 ---
 
@@ -45,7 +46,14 @@ headers: {
 ## Authorization
 
 - **USER role:** Can use auth, kyc, loans, and user profile endpoints.
-- **ADMIN role:** Can review KYC submissions and approve/reject loans.
+- **ADMIN role:** Can review KYC submissions, approve/reject loans, manage admin user views, and inspect audit trail activity.
+
+## Audit Logging
+
+- All HTTP requests are recorded in the audit trail store.
+- Sensitive request fields such as passwords, OTPs, tokens, and secrets are redacted before persistence.
+- Audit records include actor, method, path, status code, response time, IP address, user agent, and sanitized request metadata.
+- Audit trail viewing is restricted to admins.
 
 ---
 
@@ -1056,6 +1064,105 @@ Retrieves all users with KYC and loan status information.
 
 ---
 
+## Audit Trail Module
+
+**Base URL:** `/api/audit-trail`
+
+**Authentication:** Required for all endpoints  
+**Authorization:** Admin only
+
+### 1. Get Audit Activity (Admin Only)
+
+**GET** `/admin/list?page=1&limit=20`
+
+Returns paginated system activity logs captured from incoming HTTP requests.
+
+#### Query Parameters
+
+- `page` (number, optional): Page number, default `1`
+- `limit` (number, optional): Records per page, default `20`, max `100`
+- `method` (string, optional): Filter by HTTP method. Supported values: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`
+- `statusCode` (number, optional): Filter by HTTP response status code
+- `actorId` (string, optional): Filter by authenticated actor user ID
+- `search` (string, optional): Case-insensitive search across path, action, actor email, first name, and last name
+- `from` (ISO datetime, optional): Lower bound for log creation time
+- `to` (ISO datetime, optional): Upper bound for log creation time
+
+#### Response
+
+```json
+{
+  "total": 2,
+  "page": 1,
+  "limit": 20,
+  "data": [
+    {
+      "id": "c3c6b7f0-5774-4f29-80c0-66452c7ef111",
+      "action": "POST /api/auth/login",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "statusCode": 200,
+      "responseTimeMs": 184,
+      "ipAddress": "102.165.3.10",
+      "userAgent": "Mozilla/5.0",
+      "metadata": {
+        "params": {},
+        "query": {},
+        "body": {
+          "email": "admin@example.com",
+          "password": "[REDACTED]"
+        }
+      },
+      "actor": {
+        "id": "6b6976df-b31f-46b8-bf61-bf8e36998db9",
+        "email": "admin@example.com",
+        "firstName": "System",
+        "lastName": "Admin"
+      },
+      "createdAt": "2026-04-09T07:11:12.000Z"
+    }
+  ]
+}
+```
+
+#### Error Cases
+
+- **401 Unauthorized:** Missing or invalid access token
+- **403 Forbidden:** User is authenticated but not an admin
+
+#### Example
+
+**cURL:**
+
+```bash
+curl -X GET "http://localhost:3001/api/audit-trail/admin/list?page=1&limit=20&method=POST&search=login" \
+  -H "Authorization: Bearer <ADMIN_ACCESS_TOKEN>"
+```
+
+**React:**
+
+```javascript
+const params = new URLSearchParams({
+  page: '1',
+  limit: '20',
+  method: 'POST',
+  search: 'login',
+});
+
+const response = await fetch(
+  `http://localhost:3001/api/audit-trail/admin/list?${params.toString()}`,
+  {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+    },
+  },
+);
+
+const logs = await response.json();
+```
+
+---
+
 ## Enums
 
 ### Role
@@ -1128,8 +1235,12 @@ Exceeded requests return **429 Too Many Requests**.
 
 For development/testing:
 
-**Email:** `admin@microloan.local`  
-**Password:** `Admin@12345`
+These users are created automatically by migrations:
+
+| Role      | Email                   | Password      |
+| --------- | ----------------------- | ------------- |
+| Admin     | `admin@microloan.local` | `Admin@12345` |
+| Demo user | `demo@kyc.dev`          | `Demo@1234`   |
 
 ⚠️ **Change this password immediately in production!**
 

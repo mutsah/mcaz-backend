@@ -1,7 +1,7 @@
 import { Request } from 'express';
 
 export interface RequestWithUser extends Request {
-  user: {
+  user?: {
     id: string;
     email: string;
     role: string;
