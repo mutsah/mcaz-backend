@@ -41,7 +41,7 @@ export class UsersController {
   @Get('admin/list')
   @Roles(Role.ADMIN)
   @ApiOperation({
-    summary: 'Get all users with KYC and loan summary (admin only)',
+    summary: 'Get all users (admin only)',
   })
   @ApiResponse({
     status: 200,

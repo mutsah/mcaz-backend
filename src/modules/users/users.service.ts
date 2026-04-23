@@ -54,14 +54,6 @@ export class UsersService {
           phone: true,
           status: true,
           role: true,
-          kycSubmissions: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-            select: { status: true },
-          },
-          loans: {
-            select: { id: true, status: true },
-          },
           createdAt: true,
           updatedAt: true,
         },
@@ -80,9 +72,6 @@ export class UsersService {
       phone: user.phone,
       role: user.role,
       status: user.status,
-      kycStatus: user.kycSubmissions[0]?.status ?? null,
-      totalLoans: user.loans.length,
-      activeLoans: user.loans.filter((loan) => loan.status === 'ACTIVE').length,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }));

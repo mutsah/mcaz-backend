@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { KycStatus, Role, UserStatus } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 
 export class UserResponseDto {
   @ApiProperty({
@@ -39,16 +39,7 @@ export class UserResponseDto {
   updatedAt: Date;
 }
 
-export class AdminUserSummaryDto extends UserResponseDto {
-  @ApiProperty({ enum: KycStatus, nullable: true, example: 'APPROVED' })
-  kycStatus: KycStatus | null;
-
-  @ApiProperty({ example: 2 })
-  totalLoans: number;
-
-  @ApiProperty({ example: 1 })
-  activeLoans: number;
-}
+export class AdminUserSummaryDto extends UserResponseDto {}
 
 export class AdminUserListResponseDto {
   @ApiProperty({ type: [AdminUserSummaryDto] })

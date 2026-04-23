@@ -1,13 +1,13 @@
 databases:
-  - name: microloan-db
-    databaseName: microloan
-    user: microloan_user
+  - name: mcaz-db
+    databaseName: mcaz
+    user: mcaz_user
     region: oregon
     plan: free
 
 services:
   - type: web
-    name: microloan-api
+    name: mcaz-api
     env: node
     region: oregon
     plan: free
@@ -19,7 +19,7 @@ services:
         value: production
       - key: DATABASE_URL
         fromDatabase:
-          name: microloan-db
+          name: mcaz-db
           property: connectionString
       - key: JWT_SECRET
         sync: false
@@ -38,16 +38,6 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: SMTP_FROM
-        sync: false
-      - key: CLOUDFLARE_ACCOUNT_ID
-        sync: false
-      - key: CLOUDFLARE_R2_BUCKET_NAME
-        sync: false
-      - key: CLOUDFLARE_R2_PUBLIC_URL
-        sync: false
-      - key: CLOUDFLARE_ACCESS_KEY_ID
-        sync: false
-      - key: CLOUDFLARE_SECRET_ACCESS_KEY
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false

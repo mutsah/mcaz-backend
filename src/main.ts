@@ -31,13 +31,18 @@ async function bootstrap() {
 
   // enable swagger docs
   const config = new DocumentBuilder()
-    .setTitle('Microloan API')
-    .setDescription('API documentation for microloan onboarding and lending')
+    .setTitle('MCAZ - Medicines Control Authority of Zimbabwe API')
+    .setDescription(
+      'API documentation for medicine application capture, review, and tracking',
+    )
     .setVersion('1.0')
     .addTag('auth', 'Authentication related endpoints')
-    .addTag('kyc', 'KYC submission and review endpoints')
-    .addTag('loans', 'Loan application and lifecycle endpoints')
+    .addTag(
+      'drugs',
+      'Medicine application capture, review, and tracking endpoints',
+    )
     .addTag('users', 'User profile and admin user endpoints')
+    .addTag('audit-trail', 'Audit log endpoints')
     .addBearerAuth(
       {
         type: 'http',
@@ -71,7 +76,8 @@ async function bootstrap() {
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
     },
-    customSiteTitle: 'Microloan API Documentation',
+    customSiteTitle:
+      'MCAZ - Medicines Control Authority of Zimbabwe API Documentation',
     customfavIcon: 'https://nestjs.com/img/logo-small.svg',
     customCss: `
       .swagger-ui .topbar { display: none }
@@ -80,7 +86,12 @@ async function bootstrap() {
       `,
   });
 
-  await app.listen(process.env.PORT ?? 3001);
+  const port = Number(process.env.PORT ?? 3001);
+  await app.listen(port);
+
+  const appUrl = (await app.getUrl()).replace('://[::1]', '://localhost');
+  console.log(`Server running at: ${appUrl}`);
+  console.log(`Swagger docs at: ${appUrl}/api/docs`);
 }
 bootstrap().catch((error) => {
   console.error('Error starting server:', error);

@@ -51,6 +51,10 @@ export class AuditTrailService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
+    const fromDate = query.from
+      ? this.parseQueryDate(query.from, false)
+      : undefined;
+    const toDate = query.to ? this.parseQueryDate(query.to, true) : undefined;
 
     const where: Prisma.AuditLogWhereInput = {
       ...(query.method ? { method: query.method } : {}),
@@ -59,8 +63,8 @@ export class AuditTrailService {
       ...(query.from || query.to
         ? {
             createdAt: {
-              ...(query.from ? { gte: new Date(query.from) } : {}),
-              ...(query.to ? { lte: new Date(query.to) } : {}),
+              ...(fromDate ? { gte: fromDate } : {}),
+              ...(toDate ? { lte: toDate } : {}),
             },
           }
         : {}),
@@ -121,5 +125,16 @@ export class AuditTrailService {
       limit,
       data: logs as AuditLogResponseDto[],
     };
+  }
+
+  private parseQueryDate(value: string, isEndBoundary: boolean): Date {
+    const hasTimeComponent = value.includes('T');
+
+    if (!hasTimeComponent) {
+      const boundary = isEndBoundary ? 'T23:59:59.999Z' : 'T00:00:00.000Z';
+      return new Date(`${value}${boundary}`);
+    }
+
+    return new Date(value);
   }
 }

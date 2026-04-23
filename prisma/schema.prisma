@@ -21,21 +21,16 @@ enum OtpType {
   RESET
 }
 
-enum KycDocumentType {
-  NATIONAL_ID
-  PASSPORT
+enum DosageForm {
+  INJECTION
+  ORAL
+  EXTERNAL
+  VAGINAL
 }
 
-enum KycStatus {
-  SUBMITTED
-  APPROVED
-  REJECTED
-}
-
-enum LoanStatus {
+enum ApplicationStatus {
   PENDING
-  ACTIVE
-  CLOSED
+  APPROVED
   REJECTED
 }
 
@@ -50,11 +45,11 @@ model User {
   status       UserStatus @default(PENDING)
   refreshToken String?
 
-  otpRecords      OtpRecord[]
-  kycSubmissions  KycSubmission[] @relation("UserKycSubmissions")
-  reviewedKyc     KycSubmission[] @relation("ReviewedKycByAdmin")
-  loans           Loan[]
-  auditLogs       AuditLog[]      @relation("AuditActor")
+  otpRecords         OtpRecord[]
+  capturedDrugs      Drug[]             @relation("DrugCapturedBy")
+  approvedDrugs      Drug[]             @relation("DrugApprovedBy")
+  drugStatusHistory  DrugStatusHistory[] @relation("StatusHistoryActor")
+  auditLogs          AuditLog[]         @relation("AuditActor")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -86,93 +81,51 @@ model OtpRecord {
   @@map("otp_records")
 }
 
-model KycSubmission {
-  id            String          @id @default(uuid())
-  userId        String
-  documentType  KycDocumentType
-  frontFilePath String
-  backFilePath  String?
-  status        KycStatus       @default(SUBMITTED)
-  reviewedBy    String?
-  rejectionNote String?
+model Drug {
+  id                 String            @id @default(uuid())
+  genericName        String
+  strength           String
+  dosageForm         DosageForm
+  registrationNumber String            @unique
+  countryOfOrigin    String
+  status             ApplicationStatus @default(PENDING)
+  capturedBy         String
+  approvedBy         String?
+  dateCaptured       DateTime          @default(now())
+  dateApproved       DateTime?
+  expiryDate         DateTime
 
-  user     User  @relation("UserKycSubmissions", fields: [userId], references: [id], onDelete: Cascade)
-  reviewer User? @relation("ReviewedKycByAdmin", fields: [reviewedBy], references: [id])
+  capturer      User                @relation("DrugCapturedBy", fields: [capturedBy], references: [id])
+  approver      User?               @relation("DrugApprovedBy", fields: [approvedBy], references: [id])
+  statusHistory DrugStatusHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId])
-  @@index([userId, status])
   @@index([status])
   @@index([status, createdAt])
-  @@index([reviewedBy])
-  @@map("kyc_submissions")
+  @@index([registrationNumber])
+  @@index([dateCaptured])
+  @@map("drugs")
 }
 
-model Loan {
-  id          String     @id @default(uuid())
-  userId      String
-  principal   Decimal    @db.Decimal(15, 2)
-  annualRate  Decimal?   @db.Decimal(5, 4)
-  termMonths  Int
-  status      LoanStatus @default(PENDING)
-  disbursedAt DateTime?
-  purpose     String?
+model DrugStatusHistory {
+  id        String            @id @default(uuid())
+  drugId    String
+  status    ApplicationStatus
+  changedBy String?
+  note      String?
 
-  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  schedule    AmortizationSchedule[]
-  interestLog InterestLedger[]
+  drug  Drug  @relation(fields: [drugId], references: [id], onDelete: Cascade)
+  actor User? @relation("StatusHistoryActor", fields: [changedBy], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  @@index([userId])
-  @@index([userId, status])
-  @@index([status])
-  @@index([status, createdAt])
-  @@index([disbursedAt])
-  @@map("loans")
-}
-
-model AmortizationSchedule {
-  id            String   @id @default(uuid())
-  loanId        String
-  installmentNo Int
-  dueDate       DateTime @db.Date
-  principalDue  Decimal  @db.Decimal(15, 2)
-  interestDue   Decimal  @db.Decimal(15, 2)
-  totalDue      Decimal  @db.Decimal(15, 2)
-  paid          Boolean  @default(false)
-
-  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([loanId, installmentNo])
-  @@index([loanId])
-  @@index([loanId, dueDate])
-  @@index([loanId, paid, dueDate])
-  @@map("amortization_schedule")
-}
-
-model InterestLedger {
-  id              String   @id @default(uuid())
-  loanId          String
-  date            DateTime @db.Date
-  dailyInterest   Decimal  @db.Decimal(15, 6)
-  balanceSnapshot Decimal  @db.Decimal(15, 2)
-
-  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([loanId, date])
-  @@index([date])
-  @@index([loanId, date])
-  @@map("interest_ledger")
+  @@index([drugId])
+  @@index([drugId, createdAt])
+  @@index([changedBy])
+  @@index([createdAt])
+  @@map("drug_status_history")
 }
 
 model AuditLog {
